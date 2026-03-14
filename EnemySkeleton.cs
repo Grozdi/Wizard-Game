@@ -152,6 +152,16 @@ public class EnemySkeleton : MonoBehaviour
 
     private void Die()
     {
+        // Step 1: get the LootDropper component
+        LootDropper loot = GetComponent<LootDropper>();
+
+        // Step 2: if it exists, call DropLoot()
+        if (loot != null)
+        {
+            loot.DropLoot();
+        }
+
+        // Step 3: destroy the enemy
         Destroy(gameObject);
     }
 }

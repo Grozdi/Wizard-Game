@@ -24,7 +24,7 @@ using UnityEngine.AI;
     - Enemy constantly chases the Player transform.
     - On contact with Player, calls PlayerController.TakeDamage(damage).
     - On projectile hit, enemy loses health.
-    - Enemy drops loot on death if a LootDropper is attached, then destroys itself.
+    - Enemy destroys itself when health reaches zero.
 */
 
 [RequireComponent(typeof(NavMeshAgent))]
@@ -54,14 +54,11 @@ public class EnemySkeleton : MonoBehaviour
 
     private NavMeshAgent agent;
     private Transform playerTransform;
-    private LootDropper lootDropper;
     private float nextDamageTime;
-    private bool isDead;
 
     private void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
-        lootDropper = GetComponent<LootDropper>();
         currentHealth = maxHealth;
     }
 
@@ -139,7 +136,7 @@ public class EnemySkeleton : MonoBehaviour
 
     public void TakeDamage(float amount)
     {
-        if (amount <= 0f || isDead)
+        if (amount <= 0f)
         {
             return;
         }
@@ -155,19 +152,6 @@ public class EnemySkeleton : MonoBehaviour
 
     private void Die()
     {
-        if (isDead)
-        {
-            return;
-        }
-
-        isDead = true;
-
-        // If a LootDropper is attached, attempt a loot drop before destroying this enemy.
-        if (lootDropper != null)
-        {
-            lootDropper.DropLoot();
-        }
-
         Destroy(gameObject);
     }
 }

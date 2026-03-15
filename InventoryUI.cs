@@ -1,21 +1,21 @@
 using System.Text;
 using UnityEngine;
-using TMPro;
+using UnityEngine.UI;
 
 /*
     InventoryUI.cs
 
     HOW TO SET UP IN UNITY
-    1) Create a Canvas in your scene.
-    2) Add a TextMeshPro UI element (GameObject > UI > Text - TextMeshPro).
-    3) Attach this script to any GameObject (for example, Canvas or UI Manager).
-    4) In the Inspector, assign:
-       - playerInventory: the PlayerInventory component on your Player
-       - inventoryText: the TMP_Text component you want to display inventory in
+    1) Create a Canvas in your scene (GameObject > UI > Canvas).
+    2) Add a UI Text element as a child of the Canvas (GameObject > UI > Text).
+       (If using TextMeshPro instead, this script expects UnityEngine.UI.Text specifically.)
+    3) Attach this InventoryUI script to any GameObject in the scene (for example, the Canvas).
+    4) Assign:
+       - playerInventory: the Player GameObject that has PlayerInventory.cs
+       - inventoryText: the UI Text component that should display inventory contents
 
     BEHAVIOR
-    - Every frame (Update), this script reads PlayerInventory.ingredients
-      and prints all ingredient names with quantities.
+    - Every frame, the script reads PlayerInventory's dictionary and prints all ingredients + quantities.
 */
 
 public class InventoryUI : MonoBehaviour
@@ -24,8 +24,8 @@ public class InventoryUI : MonoBehaviour
     [Tooltip("Reference to the player's PlayerInventory component.")]
     public PlayerInventory playerInventory;
 
-    [Tooltip("TextMeshPro text field used to display inventory contents.")]
-    public TMP_Text inventoryText;
+    [Tooltip("UI Text used to display inventory contents.")]
+    public Text inventoryText;
 
     private void Update()
     {
@@ -34,18 +34,23 @@ public class InventoryUI : MonoBehaviour
             return;
         }
 
-        StringBuilder builder = new StringBuilder();
-        builder.AppendLine("Inventory");
-
         if (playerInventory == null || playerInventory.ingredients == null)
         {
-            inventoryText.text = builder.ToString();
+            inventoryText.text = "Inventory: (none)";
             return;
         }
 
-        foreach (var ingredient in playerInventory.ingredients)
+        if (playerInventory.ingredients.Count == 0)
         {
-            builder.AppendLine($"{ingredient.Key}: {ingredient.Value}");
+            inventoryText.text = "Inventory: (empty)";
+            return;
+        }
+
+        StringBuilder builder = new StringBuilder();
+
+        foreach (var entry in playerInventory.ingredients)
+        {
+            builder.AppendLine($"{entry.Key}: {entry.Value}");
         }
 
         inventoryText.text = builder.ToString();

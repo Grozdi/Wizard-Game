@@ -147,14 +147,14 @@ public class PlayerController : MonoBehaviour
         Rigidbody rb = projectile.GetComponent<Rigidbody>();
         if (rb != null)
         {
-            rb.linearVelocity = spawnRotation * Vector3.forward * projectileSpeed;
+            rb.velocity = spawnRotation * Vector3.forward * projectileSpeed;
         }
         else
         {
             // Fallback: add a Rigidbody at runtime so it still moves forward.
             rb = projectile.AddComponent<Rigidbody>();
             rb.useGravity = false;
-            rb.linearVelocity = spawnRotation * Vector3.forward * projectileSpeed;
+            rb.velocity = spawnRotation * Vector3.forward * projectileSpeed;
         }
 
         Destroy(projectile, projectileLifetime);

@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 /*
@@ -13,7 +14,8 @@ using UnityEngine;
 
     NOTES
     - Spawning uses a coroutine that runs during gameplay.
-    - The script counts only enemies spawned by this spawner.
+    - If no spawn points are assigned, it will spawn at the spawner's own transform.
+    - The script tracks only enemies spawned by this spawner.
 */
 
 public class EnemySpawner : MonoBehaviour
@@ -22,89 +24,101 @@ public class EnemySpawner : MonoBehaviour
     [Tooltip("Enemy prefab to spawn repeatedly.")]
     public GameObject enemyPrefab;
 
-    [Tooltip("Possible locations where enemies can spawn.")]
+    [Tooltip("Possible locations where enemies can spawn. If empty, spawns at this object.")]
     public Transform[] spawnPoints;
 
+    [Min(0.05f)]
     [Tooltip("Time in seconds between spawn attempts.")]
     public float spawnInterval = 2f;
 
+    [Min(1)]
     [Tooltip("Maximum number of spawned enemies alive at the same time.")]
     public int maxEnemiesAlive = 10;
 
-    private int enemiesAlive;
+    private readonly List<GameObject> activeEnemies = new List<GameObject>();
 
     private void Start()
     {
+        if (enemyPrefab == null)
+        {
+            Debug.LogWarning("EnemySpawner: enemyPrefab is not assigned.", this);
+        }
+
         StartCoroutine(SpawnLoop());
+    }
+
+    private void OnValidate()
+    {
+        if (spawnInterval < 0.05f)
+        {
+            spawnInterval = 0.05f;
+        }
+
+        if (maxEnemiesAlive < 1)
+        {
+            maxEnemiesAlive = 1;
+        }
     }
 
     private IEnumerator SpawnLoop()
     {
+        // Spawn immediately when gameplay starts (if possible), then continue on interval.
+        TrySpawn();
+
         while (true)
         {
             yield return new WaitForSeconds(spawnInterval);
-
-            if (!CanSpawn())
-            {
-                continue;
-            }
-
-            SpawnEnemy();
+            TrySpawn();
         }
     }
 
-    private bool CanSpawn()
+    private void TrySpawn()
     {
+        CleanupDestroyedEnemies();
+
         if (enemyPrefab == null)
-        {
-            return false;
-        }
-
-        if (spawnPoints == null || spawnPoints.Length == 0)
-        {
-            return false;
-        }
-
-        return enemiesAlive < maxEnemiesAlive;
-    }
-
-    private void SpawnEnemy()
-    {
-        Transform point = spawnPoints[Random.Range(0, spawnPoints.Length)];
-        if (point == null)
         {
             return;
         }
 
-        GameObject enemy = Instantiate(enemyPrefab, point.position, point.rotation);
-        enemiesAlive++;
-
-        SpawnedEnemyTracker tracker = enemy.AddComponent<SpawnedEnemyTracker>();
-        tracker.Initialize(this);
-    }
-
-    private void NotifyEnemyDestroyed()
-    {
-        enemiesAlive = Mathf.Max(0, enemiesAlive - 1);
-    }
-
-    /// <summary>
-    /// Tracks spawned enemy destruction so the spawner can maintain an alive count.
-    /// </summary>
-    private class SpawnedEnemyTracker : MonoBehaviour
-    {
-        private EnemySpawner owner;
-
-        public void Initialize(EnemySpawner spawner)
+        if (activeEnemies.Count >= maxEnemiesAlive)
         {
-            owner = spawner;
+            return;
         }
 
-        private void OnDestroy()
+        Transform spawnPoint = GetRandomSpawnPoint();
+        GameObject enemy = Instantiate(enemyPrefab, spawnPoint.position, spawnPoint.rotation);
+        activeEnemies.Add(enemy);
+    }
+
+    private Transform GetRandomSpawnPoint()
+    {
+        if (spawnPoints == null || spawnPoints.Length == 0)
         {
-            if (owner != null)
+            return transform;
+        }
+
+        // Try a few random picks to avoid null entries in the array.
+        for (int i = 0; i < spawnPoints.Length; i++)
+        {
+            Transform candidate = spawnPoints[Random.Range(0, spawnPoints.Length)];
+            if (candidate != null)
             {
-                owner.NotifyEnemyDestroyed();
+                return candidate;
+            }
+        }
+
+        Debug.LogWarning("EnemySpawner: spawnPoints contains only null entries. Using spawner transform.", this);
+        return transform;
+    }
+
+    private void CleanupDestroyedEnemies()
+    {
+        for (int i = activeEnemies.Count - 1; i >= 0; i--)
+        {
+            if (activeEnemies[i] == null)
+            {
+                activeEnemies.RemoveAt(i);
             }
         }
     }

@@ -10,10 +10,11 @@ using UnityEngine;
        - 0   = never drops
        - 0.5 = 50% chance
        - 1   = always drops
-    4) Call DropLoot() when the enemy dies.
-       Example from an enemy script's Die() method:
-       var lootDropper = GetComponent<LootDropper>();
-       if (lootDropper != null) lootDropper.DropLoot();
+    4) EnemySkeleton automatically calls DropLoot() on death if LootDropper is attached.
+
+    DEBUGGING TIPS
+    - If loot never appears, temporarily set dropChance = 1.
+    - Check Console logs from this script; it reports why a drop was skipped.
 */
 
 public class LootDropper : MonoBehaviour
@@ -34,7 +35,7 @@ public class LootDropper : MonoBehaviour
     {
         if (lootPrefab == null)
         {
-            Debug.LogWarning("LootDropper: lootPrefab is not assigned.", this);
+            Debug.LogWarning("LootDropper: lootPrefab is not assigned. No loot can spawn.", this);
             return;
         }
 
@@ -42,6 +43,11 @@ public class LootDropper : MonoBehaviour
         if (roll <= dropChance)
         {
             Instantiate(lootPrefab, transform.position, Quaternion.identity);
+            Debug.Log("LootDropper: Loot dropped successfully.", this);
+        }
+        else
+        {
+            Debug.Log($"LootDropper: Roll {roll:F2} > dropChance {dropChance:F2}. No loot dropped.", this);
         }
     }
 }

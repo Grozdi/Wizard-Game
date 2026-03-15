@@ -1,31 +1,51 @@
 using System.Text;
 using UnityEngine;
-using UnityEngine.UI;
+using TMPro;
 
 /*
     InventoryUI.cs
 
     HOW TO SET UP IN UNITY
-    1) Create a Canvas in your scene (GameObject > UI > Canvas).
-    2) Add a UI Text element as a child of the Canvas (GameObject > UI > Text).
-       (If using TextMeshPro instead, this script expects UnityEngine.UI.Text specifically.)
-    3) Attach this InventoryUI script to any GameObject in the scene (for example, the Canvas).
-    4) Assign:
-       - playerInventory: the Player GameObject that has PlayerInventory.cs
-       - inventoryText: the UI Text component that should display inventory contents
+    1) Create a Canvas in your scene.
+    2) Add a TextMeshPro UI element (GameObject > UI > Text - TextMeshPro).
+    3) Attach this script to any GameObject (for example, Canvas or UI Manager).
+    4) Assign inventoryText in the Inspector to the TMP_Text component.
+    5) Assign playerInventory in the Inspector (or let it auto-find in Start).
 
     BEHAVIOR
-    - Every frame, the script reads PlayerInventory's dictionary and prints all ingredients + quantities.
+    - In Start(), finds PlayerInventory automatically if one is not assigned.
+    - In Update(), reads PlayerInventory.ingredients every frame.
+    - Displays all ingredient names/quantities, or "(empty)" if inventory has no entries.
 */
 
 public class InventoryUI : MonoBehaviour
 {
     [Header("References")]
-    [Tooltip("Reference to the player's PlayerInventory component.")]
+    [Tooltip("Reference to PlayerInventory. If not assigned, auto-found in Start().")]
     public PlayerInventory playerInventory;
 
-    [Tooltip("UI Text used to display inventory contents.")]
-    public Text inventoryText;
+    [Tooltip("TextMeshPro field that renders inventory text.")]
+    public TMP_Text inventoryText;
+
+    private string lastRenderedText = string.Empty;
+    private int lastTotalItemCount = 0;
+
+    private void Start()
+    {
+        if (playerInventory == null)
+        {
+            playerInventory = FindObjectOfType<PlayerInventory>();
+        }
+
+        if (playerInventory == null)
+        {
+            Debug.LogWarning("InventoryUI: No PlayerInventory found in scene.", this);
+        }
+        else
+        {
+            Debug.Log("InventoryUI: PlayerInventory found.", this);
+        }
+    }
 
     private void Update()
     {
@@ -34,25 +54,55 @@ public class InventoryUI : MonoBehaviour
             return;
         }
 
-        if (playerInventory == null || playerInventory.ingredients == null)
+        string newText = BuildInventoryText();
+        inventoryText.text = newText;
+
+        if (newText != lastRenderedText)
         {
-            inventoryText.text = "Inventory: (none)";
-            return;
+            Debug.Log("InventoryUI: UI refreshed.", this);
+            lastRenderedText = newText;
         }
 
-        if (playerInventory.ingredients.Count == 0)
+        int currentTotalItems = GetTotalItemCount();
+        if (currentTotalItems > lastTotalItemCount)
         {
-            inventoryText.text = "Inventory: (empty)";
-            return;
+            Debug.Log($"InventoryUI: Items added. Total item quantity is now {currentTotalItems}.", this);
+        }
+
+        lastTotalItemCount = currentTotalItems;
+    }
+
+    private string BuildInventoryText()
+    {
+        if (playerInventory == null || playerInventory.ingredients == null || playerInventory.ingredients.Count == 0)
+        {
+            return "Inventory\n(empty)";
         }
 
         StringBuilder builder = new StringBuilder();
+        builder.AppendLine("Inventory");
 
-        foreach (var entry in playerInventory.ingredients)
+        foreach (var ingredient in playerInventory.ingredients)
         {
-            builder.AppendLine($"{entry.Key}: {entry.Value}");
+            builder.AppendLine($"{ingredient.Key}: {ingredient.Value}");
         }
 
-        inventoryText.text = builder.ToString();
+        return builder.ToString();
+    }
+
+    private int GetTotalItemCount()
+    {
+        if (playerInventory == null || playerInventory.ingredients == null)
+        {
+            return 0;
+        }
+
+        int total = 0;
+        foreach (var ingredient in playerInventory.ingredients)
+        {
+            total += ingredient.Value;
+        }
+
+        return total;
     }
 }

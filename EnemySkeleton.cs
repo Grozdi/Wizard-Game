@@ -5,20 +5,26 @@ using UnityEngine.AI;
     EnemySkeleton.cs
 
     SETUP IN UNITY EDITOR
-    1) Attach this script to your enemy prefab (for example, Skeleton).
+    1) Add this script to your Skeleton enemy GameObject.
     2) Add a NavMeshAgent component to the same GameObject.
-    3) Add a Collider to the enemy:
-       - Use trigger OR collision-based interaction depending on your setup.
-       - Ensure physics settings allow contact with player/projectiles.
-    4) Ensure your Player GameObject has:
-       - Tag: "Player"
-       - PlayerController component (for TakeDamage calls)
-    5) (Optional) Tag your projectile objects as "Projectile".
-    6) Assign lootPrefab in the Inspector if you want this enemy to drop loot on death.
+    3) Add a Collider to the enemy (CapsuleCollider/BoxCollider etc.).
+       - If using trigger detection, enable "Is Trigger".
+       - If using physics collision detection, keep "Is Trigger" off and ensure one side has a Rigidbody.
+    4) Bake a NavMesh for your level (Window > AI > Navigation).
+    5) Ensure your Player object has the PlayerController script attached.
+    6) (Recommended) Tag your projectile prefab as "Projectile" so this enemy can detect projectile hits.
 
-    LOOT SETUP
-    - Drag your loot prefab (e.g., BoneDust pickup) into the "Loot Prefab" field.
-    - If lootPrefab is null, no loot is dropped.
+    INSPECTOR FIELDS
+    - moveSpeed: NavMeshAgent movement speed.
+    - damage: Damage applied to player when colliding.
+    - maxHealth: Enemy max health.
+    - currentHealth: Runtime enemy health.
+
+    USAGE
+    - Enemy constantly chases the Player transform.
+    - On contact with Player, calls PlayerController.TakeDamage(damage).
+    - On projectile hit, enemy loses health.
+    - Enemy destroys itself when health reaches zero.
 */
 
 [RequireComponent(typeof(NavMeshAgent))]
@@ -32,12 +38,6 @@ public class EnemySkeleton : MonoBehaviour
     [Tooltip("Damage dealt to the player on contact.")]
     public float damage = 10f;
 
-    [Tooltip("Minimum time between damage ticks while touching the player.")]
-    public float damageCooldown = 0.75f;
-
-    [Tooltip("Damage taken when hit by an object tagged 'Projectile'.")]
-    public float projectileDamage = 25f;
-
     [Header("Health")]
     [Tooltip("Maximum enemy health.")]
     public float maxHealth = 50f;
@@ -45,14 +45,16 @@ public class EnemySkeleton : MonoBehaviour
     [Tooltip("Current enemy health.")]
     public float currentHealth = 50f;
 
-    [Header("Loot")]
-    [Tooltip("Loot prefab to spawn when this enemy dies. Leave null for no drop.")]
-    public GameObject lootPrefab;
+    [Header("Optional Tuning")]
+    [Tooltip("Minimum time between damage ticks while touching the player.")]
+    public float damageCooldown = 0.75f;
+
+    [Tooltip("Damage taken when hit by an object tagged 'Projectile'.")]
+    public float projectileDamage = 25f;
 
     private NavMeshAgent agent;
     private Transform playerTransform;
     private float nextDamageTime;
-    private bool isDead;
 
     private void Awake()
     {
@@ -69,13 +71,13 @@ public class EnemySkeleton : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("EnemySkeleton: No GameObject with tag 'Player' found in scene.", this);
+            Debug.LogWarning("EnemySkeleton: No GameObject with tag 'Player' found in scene.");
         }
     }
 
     private void Update()
     {
-        if (isDead || playerTransform == null)
+        if (playerTransform == null)
         {
             return;
         }
@@ -114,7 +116,7 @@ public class EnemySkeleton : MonoBehaviour
 
     private void TryDamagePlayer(GameObject other)
     {
-        if (isDead || !other.CompareTag("Player"))
+        if (!other.CompareTag("Player"))
         {
             return;
         }
@@ -134,7 +136,7 @@ public class EnemySkeleton : MonoBehaviour
 
     public void TakeDamage(float amount)
     {
-        if (amount <= 0f || isDead)
+        if (amount <= 0f)
         {
             return;
         }
@@ -150,21 +152,16 @@ public class EnemySkeleton : MonoBehaviour
 
     private void Die()
     {
-        if (isDead)
+        // Step 1: get the LootDropper component
+        LootDropper loot = GetComponent<LootDropper>();
+
+        // Step 2: if it exists, call DropLoot()
+        if (loot != null)
         {
-            return;
+            loot.DropLoot();
         }
 
-        isDead = true;
-
-        // Spawn loot BEFORE destroying this enemy.
-        if (lootPrefab != null)
-        {
-            Instantiate(lootPrefab, transform.position, Quaternion.identity);
-            Debug.Log("EnemySkeleton: Loot dropped.", this);
-        }
-
-        Debug.Log("EnemySkeleton: Enemy died.", this);
+        // Step 3: destroy the enemy
         Destroy(gameObject);
     }
 }

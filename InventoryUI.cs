@@ -10,26 +10,32 @@ using TMPro;
     2) Add a TextMeshPro UI element (GameObject > UI > Text - TextMeshPro).
     3) Attach this script to any GameObject (for example, Canvas or UI Manager).
     4) Assign inventoryText in the Inspector to the TMP_Text component.
-       (playerInventory is auto-found in Start.)
+    5) Assign playerInventory in the Inspector (or let it auto-find in Start).
 
     BEHAVIOR
-    - In Start(), finds PlayerInventory automatically.
+    - In Start(), finds PlayerInventory automatically if one is not assigned.
     - In Update(), reads PlayerInventory.ingredients every frame.
-    - Shows "(empty)" only when there are no items.
+    - Displays all ingredient names/quantities, or "(empty)" if inventory has no entries.
 */
 
 public class InventoryUI : MonoBehaviour
 {
     [Header("References")]
-    [Tooltip("Auto-found at runtime in Start().")]
+    [Tooltip("Reference to PlayerInventory. If not assigned, auto-found in Start().")]
     public PlayerInventory playerInventory;
 
-    [Tooltip("TextMeshPro text field used to display inventory contents.")]
+    [Tooltip("TextMeshPro field that renders inventory text.")]
     public TMP_Text inventoryText;
+
+    private string lastRenderedText = string.Empty;
+    private int lastTotalItemCount = 0;
 
     private void Start()
     {
-        playerInventory = FindObjectOfType<PlayerInventory>();
+        if (playerInventory == null)
+        {
+            playerInventory = FindObjectOfType<PlayerInventory>();
+        }
 
         if (playerInventory == null)
         {
@@ -37,7 +43,7 @@ public class InventoryUI : MonoBehaviour
         }
         else
         {
-            Debug.Log("InventoryUI: PlayerInventory found successfully.", this);
+            Debug.Log("InventoryUI: PlayerInventory found.", this);
         }
     }
 
@@ -48,17 +54,29 @@ public class InventoryUI : MonoBehaviour
             return;
         }
 
-        if (playerInventory == null || playerInventory.ingredients == null)
+        string newText = BuildInventoryText();
+        inventoryText.text = newText;
+
+        if (newText != lastRenderedText)
         {
-            inventoryText.text = "Inventory\n(empty)";
-            return;
+            Debug.Log("InventoryUI: UI refreshed.", this);
+            lastRenderedText = newText;
         }
 
-        if (playerInventory.ingredients.Count == 0)
+        int currentTotalItems = GetTotalItemCount();
+        if (currentTotalItems > lastTotalItemCount)
         {
-            inventoryText.text = "Inventory\n(empty)";
-            Debug.Log("InventoryUI: Inventory is currently empty.", this);
-            return;
+            Debug.Log($"InventoryUI: Items added. Total item quantity is now {currentTotalItems}.", this);
+        }
+
+        lastTotalItemCount = currentTotalItems;
+    }
+
+    private string BuildInventoryText()
+    {
+        if (playerInventory == null || playerInventory.ingredients == null || playerInventory.ingredients.Count == 0)
+        {
+            return "Inventory\n(empty)";
         }
 
         StringBuilder builder = new StringBuilder();
@@ -69,7 +87,22 @@ public class InventoryUI : MonoBehaviour
             builder.AppendLine($"{ingredient.Key}: {ingredient.Value}");
         }
 
-        inventoryText.text = builder.ToString();
-        Debug.Log($"InventoryUI: Displaying {playerInventory.ingredients.Count} inventory item type(s).", this);
+        return builder.ToString();
+    }
+
+    private int GetTotalItemCount()
+    {
+        if (playerInventory == null || playerInventory.ingredients == null)
+        {
+            return 0;
+        }
+
+        int total = 0;
+        foreach (var ingredient in playerInventory.ingredients)
+        {
+            total += ingredient.Value;
+        }
+
+        return total;
     }
 }

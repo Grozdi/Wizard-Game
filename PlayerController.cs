@@ -137,26 +137,43 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
+        Camera aimCamera = Camera.main;
+        if (aimCamera == null)
+        {
+            return;
+        }
+
         Transform spawnTransform = projectileSpawnPoint != null ? projectileSpawnPoint : playerCamera;
         Vector3 spawnPosition = spawnTransform != null ? spawnTransform.position : transform.position + transform.forward;
-        Quaternion spawnRotation = spawnTransform != null ? spawnTransform.rotation : transform.rotation;
+
+        Ray ray = aimCamera.ScreenPointToRay(new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f));
+        Debug.DrawRay(ray.origin, ray.direction * 100f, Color.red, 1f);
+
+        Vector3 targetPoint;
+        if (Physics.Raycast(ray, out RaycastHit hit, 100f))
+        {
+            targetPoint = hit.point;
+        }
+        else
+        {
+            targetPoint = ray.origin + ray.direction * 100f;
+        }
+
+        Vector3 direction = (targetPoint - spawnPosition).normalized;
+        Quaternion spawnRotation = direction.sqrMagnitude > 0f ? Quaternion.LookRotation(direction) : transform.rotation;
 
         GameObject projectile = Instantiate(projectilePrefab, spawnPosition, spawnRotation);
 
         // If projectile has Rigidbody, fire using physics velocity.
         Rigidbody rb = projectile.GetComponent<Rigidbody>();
-        if (rb != null)
-        {
-            rb.velocity = spawnRotation * Vector3.forward * projectileSpeed;
-        }
-        else
+        if (rb == null)
         {
             // Fallback: add a Rigidbody at runtime so it still moves forward.
             rb = projectile.AddComponent<Rigidbody>();
             rb.useGravity = false;
-            rb.velocity = spawnRotation * Vector3.forward * projectileSpeed;
         }
 
+        rb.velocity = direction * projectileSpeed;
         Destroy(projectile, projectileLifetime);
     }
 

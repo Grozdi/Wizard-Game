@@ -78,6 +78,8 @@ public class EnemySkeleton : MonoBehaviour
     private Transform playerTransform;
     private float nextDamageTime;
     private bool isDead;
+    private bool hasLoggedMissingPlayer;
+    private bool hasLoggedChasing;
     private Vector3 originalScale;
     private Coroutine hitFeedbackRoutine;
 
@@ -95,26 +97,35 @@ public class EnemySkeleton : MonoBehaviour
 
     private void Start()
     {
-        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
-        if (playerObj != null)
-        {
-            playerTransform = playerObj.transform;
-        }
-        else
-        {
-            Debug.LogWarning("EnemySkeleton: No GameObject with tag 'Player' found in scene.", this);
-        }
+        TryFindPlayer();
     }
 
     private void Update()
     {
-        if (isDead || playerTransform == null)
+        if (isDead)
+        {
+            return;
+        }
+
+        if (playerTransform == null)
+        {
+            TryFindPlayer();
+            return;
+        }
+
+        if (!agent.isOnNavMesh)
         {
             return;
         }
 
         agent.speed = moveSpeed;
         agent.SetDestination(playerTransform.position);
+
+        if (!hasLoggedChasing)
+        {
+            Debug.Log("Enemy starts chasing", this);
+            hasLoggedChasing = true;
+        }
     }
 
     private void OnCollisionStay(Collision collision)
@@ -142,6 +153,24 @@ public class EnemySkeleton : MonoBehaviour
         {
             TakeDamage(projectileDamage);
             Destroy(other.gameObject);
+        }
+    }
+
+    private void TryFindPlayer()
+    {
+        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+        if (playerObj != null)
+        {
+            playerTransform = playerObj.transform;
+            hasLoggedMissingPlayer = false;
+            Debug.Log("Player is found", this);
+            return;
+        }
+
+        if (!hasLoggedMissingPlayer)
+        {
+            Debug.LogError("EnemySkeleton: Player with tag 'Player' not found.", this);
+            hasLoggedMissingPlayer = true;
         }
     }
 
@@ -263,6 +292,17 @@ public class EnemySkeleton : MonoBehaviour
         }
     }
 
+    private void DropLoot()
+    {
+        if (lootPrefab == null)
+        {
+            return;
+        }
+
+        Debug.Log("Dropping loot", this);
+        Instantiate(lootPrefab, transform.position + Vector3.up * 1f, Quaternion.identity);
+    }
+
     private void Die()
     {
         if (isDead)
@@ -279,14 +319,8 @@ public class EnemySkeleton : MonoBehaviour
             hitFeedbackRoutine = null;
         }
 
-        // Spawn loot BEFORE destroying this enemy.
-        if (lootPrefab != null)
-        {
-            Instantiate(lootPrefab, transform.position, Quaternion.identity);
-            Debug.Log("EnemySkeleton: Loot dropped.", this);
-        }
-
-        Debug.Log("EnemySkeleton: Enemy died.", this);
+        Debug.Log("Enemy died", this);
+        DropLoot();
         Destroy(gameObject);
     }
 }

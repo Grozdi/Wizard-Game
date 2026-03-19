@@ -18,11 +18,11 @@ using UnityEngine;
     - gravity: Downward gravity acceleration.
     - lookSensitivity: Mouse sensitivity for X/Y look.
     - minPitch / maxPitch: Vertical look clamp limits.
-    - maxHealth / currentHealth: Health setup.
-    - projectilePrefab: Prefab to instantiate on left click.
-    - projectileSpawnPoint: Optional spawn point for projectiles.
     - projectileSpeed: Launch speed for projectile Rigidbody.
     - projectileLifetime: Auto-destroy timer for spawned projectiles.
+    - meleeDamage: Damage dealt on right-click melee hit.
+    - meleeRange: Max raycast range for melee attacks.
+    - maxHealth / currentHealth: Health setup.
 */
 
 [RequireComponent(typeof(CharacterController))]
@@ -55,11 +55,17 @@ public class PlayerController : MonoBehaviour
     [Tooltip("Optional spawn point. If null, camera position is used.")]
     public Transform projectileSpawnPoint;
 
-    [Tooltip("Projectile launch speed (used if projectile has a Rigidbody).")]
+    [Tooltip("Projectile launch speed.")]
     public float projectileSpeed = 25f;
 
     [Tooltip("Seconds before spawned projectile is destroyed.")]
     public float projectileLifetime = 5f;
+
+    [Tooltip("Damage dealt with melee on right click.")]
+    public float meleeDamage = 25f;
+
+    [Tooltip("Range of melee raycast attack.")]
+    public float meleeRange = 3f;
 
     [Header("Health")]
     [Tooltip("Maximum health value.")]
@@ -88,7 +94,7 @@ public class PlayerController : MonoBehaviour
     {
         HandleMovement();
         HandleMouseLook();
-        HandleShooting();
+        HandleCombat();
     }
 
     private void HandleMovement()
@@ -130,23 +136,44 @@ public class PlayerController : MonoBehaviour
         playerCamera.localRotation = Quaternion.Euler(pitch, 0f, 0f);
     }
 
+    private void HandleCombat()
+    {
+        HandleShooting();
+        HandleMelee();
+    }
+
     private void HandleShooting()
     {
-        if (!Input.GetMouseButtonDown(0) || projectilePrefab == null)
+        if (!Input.GetMouseButtonDown(0))
         {
+            return;
+        }
+
+        Debug.Log("Shoot pressed");
+
+        if (projectilePrefab == null)
+        {
+            Debug.LogError("PlayerController: projectilePrefab is not assigned.", this);
             return;
         }
 
         Camera aimCamera = Camera.main;
         if (aimCamera == null)
         {
+            Debug.LogError("PlayerController: Camera.main not found.", this);
             return;
         }
 
         Transform spawnTransform = projectileSpawnPoint != null ? projectileSpawnPoint : playerCamera;
-        Vector3 spawnPosition = spawnTransform != null ? spawnTransform.position : transform.position + transform.forward;
+        if (spawnTransform == null)
+        {
+            Debug.LogError("PlayerController: projectileSpawnPoint and playerCamera are both missing.", this);
+            return;
+        }
 
-        Ray ray = aimCamera.ScreenPointToRay(new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f));
+        Vector3 spawnPosition = spawnTransform.position;
+        Vector3 screenCenter = new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f);
+        Ray ray = aimCamera.ScreenPointToRay(screenCenter);
         Debug.DrawRay(ray.origin, ray.direction * 100f, Color.red, 1f);
 
         Vector3 targetPoint;
@@ -160,21 +187,56 @@ public class PlayerController : MonoBehaviour
         }
 
         Vector3 direction = (targetPoint - spawnPosition).normalized;
-        Quaternion spawnRotation = direction.sqrMagnitude > 0f ? Quaternion.LookRotation(direction) : transform.rotation;
+        if (direction == Vector3.zero)
+        {
+            direction = spawnTransform.forward;
+        }
 
-        GameObject projectile = Instantiate(projectilePrefab, spawnPosition, spawnRotation);
+        Quaternion projectileRotation = Quaternion.LookRotation(direction);
+        GameObject projectile = Instantiate(projectilePrefab, spawnPosition, projectileRotation);
 
-        // If projectile has Rigidbody, fire using physics velocity.
         Rigidbody rb = projectile.GetComponent<Rigidbody>();
         if (rb == null)
         {
-            // Fallback: add a Rigidbody at runtime so it still moves forward.
             rb = projectile.AddComponent<Rigidbody>();
-            rb.useGravity = false;
         }
 
+        rb.useGravity = false;
         rb.velocity = direction * projectileSpeed;
+
+        Debug.Log("Projectile fired");
         Destroy(projectile, projectileLifetime);
+    }
+
+    private void HandleMelee()
+    {
+        if (!Input.GetMouseButtonDown(1))
+        {
+            return;
+        }
+
+        Camera aimCamera = Camera.main;
+        if (aimCamera == null)
+        {
+            Debug.Log("Melee missed");
+            return;
+        }
+
+        Vector3 screenCenter = new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f);
+        Ray ray = aimCamera.ScreenPointToRay(screenCenter);
+
+        if (Physics.Raycast(ray, out RaycastHit hit, meleeRange))
+        {
+            EnemySkeleton enemy = hit.collider.GetComponentInParent<EnemySkeleton>();
+            if (enemy != null)
+            {
+                enemy.TakeDamage(meleeDamage);
+                Debug.Log("Melee hit");
+                return;
+            }
+        }
+
+        Debug.Log("Melee missed");
     }
 
     /// <summary>

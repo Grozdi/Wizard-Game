@@ -16,3 +16,10 @@ This release bundles the current core gameplay scripts needed for a playable pro
 ## Notes
 - This is the baseline "version 0.1" integration snapshot.
 - Final gameplay balancing, scene wiring, and QA playtesting are still required.
+<<<<<<< codex/create-playercontroller-script-for-unity-mv9zs9
+
+## Pull Request Refresh
+- Refreshed the release notes so the current prototype snapshot can be packaged as a pull request from this environment.
+- No gameplay behavior changes were introduced in this note-only update.
+=======
+>>>>>>> main

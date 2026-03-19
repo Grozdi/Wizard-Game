@@ -158,9 +158,14 @@ public class PlayerController : MonoBehaviour
         }
 
         Camera aimCamera = Camera.main;
+        if (aimCamera == null && playerCamera != null)
+        {
+            aimCamera = playerCamera.GetComponent<Camera>();
+        }
+
         if (aimCamera == null)
         {
-            Debug.LogError("PlayerController: Camera.main not found.", this);
+            Debug.LogError("PlayerController: No valid aiming camera found. Assign playerCamera or tag the camera as MainCamera.", this);
             return;
         }
 
@@ -216,8 +221,14 @@ public class PlayerController : MonoBehaviour
         }
 
         Camera aimCamera = Camera.main;
+        if (aimCamera == null && playerCamera != null)
+        {
+            aimCamera = playerCamera.GetComponent<Camera>();
+        }
+
         if (aimCamera == null)
         {
+            Debug.LogError("PlayerController: No valid aiming camera found for melee.", this);
             Debug.Log("Melee missed");
             return;
         }

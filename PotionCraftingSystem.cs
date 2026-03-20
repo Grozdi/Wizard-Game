@@ -26,7 +26,7 @@ using UnityEngine;
 */
 
 [Serializable]
-public class PotionRecipe
+public class AlchemyRecipe
 {
     public string potionName;
     public List<string> requiredIngredients = new List<string>();
@@ -37,7 +37,7 @@ public class PotionCraftingSystem : MonoBehaviour
 {
     [Header("Potion Recipes")]
     [Tooltip("All craftable potion recipes configured in the Inspector.")]
-    public List<PotionRecipe> recipes = new List<PotionRecipe>();
+    public List<AlchemyRecipe> recipes = new List<AlchemyRecipe>();
 
     /// <summary>
     /// Attempts to craft a potion by name using the provided player inventory.
@@ -57,7 +57,7 @@ public class PotionCraftingSystem : MonoBehaviour
             return false;
         }
 
-        PotionRecipe recipe = FindRecipe(potionName);
+        AlchemyRecipe recipe = FindRecipe(potionName);
         if (recipe == null)
         {
             Debug.LogWarning($"PotionCraftingSystem: No recipe found for '{potionName}'.", this);
@@ -112,7 +112,7 @@ public class PotionCraftingSystem : MonoBehaviour
             return craftable;
         }
 
-        foreach (PotionRecipe recipe in recipes)
+        foreach (AlchemyRecipe recipe in recipes)
         {
             if (recipe == null || string.IsNullOrWhiteSpace(recipe.potionName))
             {
@@ -140,11 +140,11 @@ public class PotionCraftingSystem : MonoBehaviour
         return craftable;
     }
 
-    private PotionRecipe FindRecipe(string potionName)
+    private AlchemyRecipe FindRecipe(string potionName)
     {
         for (int i = 0; i < recipes.Count; i++)
         {
-            PotionRecipe recipe = recipes[i];
+            AlchemyRecipe recipe = recipes[i];
             if (recipe == null || string.IsNullOrWhiteSpace(recipe.potionName))
             {
                 continue;

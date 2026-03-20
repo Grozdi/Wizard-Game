@@ -4,11 +4,12 @@ using UnityEngine;
     IngredientPickup.cs
 
     SETUP IN UNITY
-    1) Attach this script to your ingredient/loot prefab (for example, BoneDust).
+    1) Attach this script to your ingredient/loot prefab (for example, BoneDust or Mushroom).
     2) Add a Collider to that prefab and enable "Is Trigger".
     3) Ensure the Player GameObject is tagged as "Player".
     4) Ensure the Player GameObject has a PlayerInventory component attached.
-    5) Set ingredientName in the Inspector (for example, "Bone Dust").
+    5) Set ingredientName in the Inspector to match the crafting/inventory ingredient name exactly.
+       Examples: "Mushroom", "Crystal", "FireEssence", "Water", "BoneDust".
 
     BEHAVIOR
     - When the Player enters the trigger, this script calls:
@@ -21,7 +22,7 @@ public class IngredientPickup : MonoBehaviour
 {
     [Header("Ingredient Settings")]
     [Tooltip("Name of the ingredient to add to player inventory.")]
-    public string ingredientName = "Bone Dust";
+    public string ingredientName = "BoneDust";
 
     private void OnTriggerEnter(Collider other)
     {

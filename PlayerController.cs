@@ -207,7 +207,7 @@ public class PlayerController : MonoBehaviour
         }
 
         rb.useGravity = false;
-        rb.linearVelocity = direction * projectileSpeed;
+        rb.velocity = direction * projectileSpeed;
 
         Debug.Log("Projectile fired");
         Destroy(projectile, projectileLifetime);

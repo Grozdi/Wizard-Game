@@ -157,6 +157,13 @@ public class PlayerController : MonoBehaviour
             rb.linearVelocity = spawnRotation * Vector3.forward * projectileSpeed;
         }
 
+<<<<<<< Updated upstream
+=======
+        rb.useGravity = false;
+        rb.linearVelocity = direction * projectileSpeed;
+
+        Debug.Log("Projectile fired");
+>>>>>>> Stashed changes
         Destroy(projectile, projectileLifetime);
     }
 

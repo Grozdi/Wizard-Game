@@ -9,11 +9,7 @@ using UnityEngine;
     2) Call AddIngredient(...) when the player picks up ingredients.
     3) Call UseIngredient(...) when crafting/consuming ingredients.
     4) Call GetIngredientAmount(...) to check current quantity for UI/gameplay.
-
-    EXAMPLE
-    - inventory.AddIngredient("Herb", 3);
-    - bool used = inventory.UseIngredient("Herb", 1);
-    - int herbsLeft = inventory.GetIngredientAmount("Herb");
+    5) Call HasItem(...) to validate ingredient quantity before crafting.
 */
 
 public class PlayerInventory : MonoBehaviour
@@ -22,9 +18,6 @@ public class PlayerInventory : MonoBehaviour
     [Tooltip("Tracks ingredient names and their quantities at runtime.")]
     public Dictionary<string, int> ingredients = new Dictionary<string, int>();
 
-    /// <summary>
-    /// Adds ingredients to inventory. If ingredient exists, increments quantity; otherwise creates it.
-    /// </summary>
     public void AddIngredient(string ingredientName, int amount)
     {
         if (string.IsNullOrWhiteSpace(ingredientName))
@@ -51,9 +44,6 @@ public class PlayerInventory : MonoBehaviour
         Debug.Log($"PlayerInventory: Added {amount} x {ingredientName}. Total: {ingredients[ingredientName]}", this);
     }
 
-    /// <summary>
-    /// Returns the current amount of an ingredient. Returns 0 if not found.
-    /// </summary>
     public int GetIngredientAmount(string ingredientName)
     {
         if (string.IsNullOrWhiteSpace(ingredientName))
@@ -70,9 +60,18 @@ public class PlayerInventory : MonoBehaviour
     }
 
     /// <summary>
-    /// Attempts to use a quantity of an ingredient.
-    /// Returns true if successful, false if not enough (or invalid request).
+    /// Returns true only if the inventory contains at least the requested amount.
     /// </summary>
+    public bool HasItem(string ingredientName, int amount)
+    {
+        if (string.IsNullOrWhiteSpace(ingredientName) || amount <= 0)
+        {
+            return false;
+        }
+
+        return GetIngredientAmount(ingredientName) >= amount;
+    }
+
     public bool UseIngredient(string ingredientName, int amount)
     {
         if (string.IsNullOrWhiteSpace(ingredientName))
@@ -97,7 +96,6 @@ public class PlayerInventory : MonoBehaviour
         ingredients[ingredientName] = currentAmount - amount;
         Debug.Log($"PlayerInventory: Used {amount} x {ingredientName}. Remaining: {ingredients[ingredientName]}", this);
 
-        // Optional cleanup: remove zero-quantity entries.
         if (ingredients[ingredientName] <= 0)
         {
             ingredients.Remove(ingredientName);

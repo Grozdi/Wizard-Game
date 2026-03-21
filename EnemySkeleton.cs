@@ -6,72 +6,33 @@ using UnityEngine.AI;
 /*
     EnemySkeleton.cs
 
-    SETUP IN UNITY EDITOR
-    1) Attach this script to your enemy prefab (for example, Skeleton).
-    2) Add a NavMeshAgent component to the same GameObject.
-    3) Add a Collider to the enemy:
-       - Use trigger OR collision-based interaction depending on your setup.
-       - Ensure physics settings allow contact with player/projectiles.
-    4) Ensure your Player GameObject has:
-       - Tag: "Player"
-       - PlayerController component (for TakeDamage calls)
-    5) (Optional) Tag your projectile objects as "Projectile".
-    6) Assign lootPrefab in the Inspector if you want this enemy to drop loot on death.
-    7) Make sure the enemy has one or more Renderers so hit flash feedback can change material colors.
-
-    LOOT SETUP
-    - Drag your loot prefab (e.g., BoneDust pickup) into the "Loot Prefab" field.
-    - If lootPrefab is null, no loot is dropped.
-
-    HIT FEEDBACK
-    - Normal damage flashes red and scales the enemy to 1.1x briefly.
-    - Critical damage flashes yellow and scales the enemy to 1.2x briefly.
-    - Use TakeDamage(amount) for normal hits.
-    - Use TakeCriticalDamage(amount) if you want the stronger feedback effect.
+    Basic NavMesh enemy that chases the player, damages on contact,
+    takes projectile/melee damage, flashes on hit, and drops loot on death.
 */
 
 [RequireComponent(typeof(NavMeshAgent))]
 public class EnemySkeleton : MonoBehaviour
 {
     [Header("Movement")]
-    [Tooltip("NavMeshAgent movement speed.")]
     public float moveSpeed = 3.5f;
 
     [Header("Combat")]
-    [Tooltip("Damage dealt to the player on contact.")]
     public float damage = 10f;
-
-    [Tooltip("Minimum time between damage ticks while touching the player.")]
     public float damageCooldown = 0.75f;
-
-    [Tooltip("Damage taken when hit by an object tagged 'Projectile'.")]
     public float projectileDamage = 25f;
 
     [Header("Health")]
-    [Tooltip("Maximum enemy health.")]
     public float maxHealth = 50f;
-
-    [Tooltip("Current enemy health.")]
     public float currentHealth = 50f;
 
     [Header("Loot")]
-    [Tooltip("Loot prefab to spawn when this enemy dies. Leave null for no drop.")]
     public GameObject lootPrefab;
 
     [Header("Hit Feedback")]
-    [Tooltip("How long hit feedback lasts in seconds.")]
     public float hitFeedbackDuration = 0.1f;
-
-    [Tooltip("Tint color used for normal hits.")]
     public Color normalHitColor = Color.red;
-
-    [Tooltip("Tint color used for critical hits.")]
     public Color criticalHitColor = Color.yellow;
-
-    [Tooltip("Temporary scale multiplier used for normal hits.")]
     public float normalHitScaleMultiplier = 1.1f;
-
-    [Tooltip("Temporary scale multiplier used for critical hits.")]
     public float criticalHitScaleMultiplier = 1.2f;
 
     private NavMeshAgent agent;
@@ -79,11 +40,8 @@ public class EnemySkeleton : MonoBehaviour
     private float nextDamageTime;
     private bool isDead;
     private bool hasLoggedMissingPlayer;
-    private bool hasLoggedChasing;
     private Vector3 originalScale;
     private Coroutine hitFeedbackRoutine;
-
-    // Cache all materials so we can flash their colors and then restore them.
     private readonly List<Material> cachedMaterials = new List<Material>();
     private readonly List<Color> originalColors = new List<Color>();
 
@@ -113,6 +71,9 @@ public class EnemySkeleton : MonoBehaviour
             return;
         }
 
+        Vector3 lookTarget = new Vector3(playerTransform.position.x, transform.position.y, playerTransform.position.z);
+        transform.LookAt(lookTarget);
+
         if (!agent.isOnNavMesh)
         {
             return;
@@ -120,12 +81,6 @@ public class EnemySkeleton : MonoBehaviour
 
         agent.speed = moveSpeed;
         agent.SetDestination(playerTransform.position);
-
-        if (!hasLoggedChasing)
-        {
-            Debug.Log("Enemy starts chasing", this);
-            hasLoggedChasing = true;
-        }
     }
 
     private void OnCollisionStay(Collision collision)
@@ -199,9 +154,6 @@ public class EnemySkeleton : MonoBehaviour
         ApplyDamage(amount, false);
     }
 
-    /// <summary>
-    /// Optional stronger damage path that triggers critical-hit feedback.
-    /// </summary>
     public void TakeCriticalDamage(float amount)
     {
         ApplyDamage(amount, true);

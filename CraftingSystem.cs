@@ -16,7 +16,6 @@ using UnityEngine;
     - Uses the existing PlayerInventory ingredient system.
     - Ingredients are string-based, so Mushroom, Crystal, FireEssence, and Water work by name.
     - Keeps the system simple and expandable by using PotionRecipe objects and a recipe lookup table.
-    - For now, successful crafting logs the crafted potion name as the result/effect trigger.
 */
 
 public class CraftingSystem : MonoBehaviour
@@ -54,12 +53,9 @@ public class CraftingSystem : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Attempts to craft a potion by name using ingredients from PlayerInventory.
-    /// </summary>
     public void CraftPotion(string potionName)
     {
-        Debug.Log($"Crafting started for {potionName}", this);
+        Debug.Log($"Craft attempt: {potionName}", this);
 
         if (playerInventory == null)
         {
@@ -77,17 +73,21 @@ public class CraftingSystem : MonoBehaviour
 
         if (!HasRequiredIngredients(recipe))
         {
-            Debug.Log("Not enough ingredients");
-            Debug.Log("Missing ingredients");
+            Debug.Log("Missing ingredients", this);
             return;
         }
 
         foreach (KeyValuePair<string, int> ingredient in recipe.ingredientsRequired)
         {
-            playerInventory.UseIngredient(ingredient.Key, ingredient.Value);
+            bool removed = playerInventory.UseIngredient(ingredient.Key, ingredient.Value);
+            if (!removed)
+            {
+                Debug.Log("Missing ingredients", this);
+                return;
+            }
         }
 
-        Debug.Log($"Crafted {FormatPotionName(recipe.potionName)}", this);
+        Debug.Log($"Successfully crafted {FormatPotionName(recipe.potionName)}", this);
     }
 
     private void InitializeRecipes()
@@ -132,8 +132,9 @@ public class CraftingSystem : MonoBehaviour
     {
         foreach (KeyValuePair<string, int> ingredient in recipe.ingredientsRequired)
         {
-            if (playerInventory.GetIngredientAmount(ingredient.Key) < ingredient.Value)
+            if (!playerInventory.HasItem(ingredient.Key, ingredient.Value))
             {
+                Debug.Log($"Missing ingredient: {ingredient.Key} x{ingredient.Value}", this);
                 return false;
             }
         }
@@ -143,26 +144,10 @@ public class CraftingSystem : MonoBehaviour
 
     private string FormatPotionName(string potionName)
     {
-        if (potionName == "HealthPotion")
-        {
-            return "Health Potion";
-        }
-
-        if (potionName == "ManaPotion")
-        {
-            return "Mana Potion";
-        }
-
-        if (potionName == "StrengthPotion")
-        {
-            return "Strength Potion";
-        }
-
-        if (potionName == "SpeedPotion")
-        {
-            return "Speed Potion";
-        }
-
+        if (potionName == "HealthPotion") return "Health Potion";
+        if (potionName == "ManaPotion") return "Mana Potion";
+        if (potionName == "StrengthPotion") return "Strength Potion";
+        if (potionName == "SpeedPotion") return "Speed Potion";
         return potionName;
     }
 }

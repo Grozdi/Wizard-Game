@@ -3,15 +3,8 @@ using UnityEngine;
 /*
     PlayerController.cs
 
-    UNITY EDITOR SETUP INSTRUCTIONS
-    1) Create a Player GameObject (for example, a Capsule) and add a CharacterController component.
-    2) Attach this PlayerController script to that same Player GameObject.
-    3) Make the Main Camera a child of the Player object and position it at eye height (for example Y = 1.6).
-    4) Drag the child camera Transform into the "Player Camera" field in the Inspector.
-    5) Create a projectile prefab (for example, a small Sphere) and optionally add a Rigidbody to it.
-    6) Drag that projectile prefab into the "Projectile Prefab" field in the Inspector.
-    7) (Optional but recommended) Create an empty child object at the muzzle location and assign it to "Projectile Spawn Point".
-       If left unassigned, the script uses the camera position as the spawn point.
+    First-person controller with movement, mouse look, shooting, and melee.
+    Shooting uses the camera forward direction so movement does not change projectile aim.
 */
 
 [RequireComponent(typeof(CharacterController))]
@@ -33,10 +26,11 @@ public class PlayerController : MonoBehaviour
     public float projectileSpeed = 25f;
     public float projectileLifetime = 5f;
     public float fireRate = 0.15f;
+    public int projectileDamage = 25;
     public float meleeDamage = 25f;
     public float meleeRange = 3f;
 
-    [Header("Health")]
+    [Header("Legacy Health")]
     public float maxHealth = 100f;
     public float currentHealth = 100f;
 
@@ -137,27 +131,13 @@ public class PlayerController : MonoBehaviour
         }
 
         Vector3 spawnPosition = spawnTransform.position;
-        Vector3 screenCenter = new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f);
-        Ray ray = aimCamera.ScreenPointToRay(screenCenter);
-        Debug.DrawRay(ray.origin, ray.direction * 100f, Color.red, 1f);
-
-        Vector3 targetPoint;
-        if (Physics.Raycast(ray, out RaycastHit hit, 100f))
+        Vector3 shootDirection = aimCamera.transform.forward;
+        if (shootDirection == Vector3.zero)
         {
-            targetPoint = hit.point;
-        }
-        else
-        {
-            targetPoint = ray.origin + ray.direction * 100f;
+            shootDirection = transform.forward;
         }
 
-        Vector3 direction = (targetPoint - spawnPosition).normalized;
-        if (direction == Vector3.zero)
-        {
-            direction = aimCamera.transform.forward;
-        }
-
-        GameObject projectile = Instantiate(projectilePrefab, spawnPosition, Quaternion.LookRotation(direction));
+        GameObject projectile = Instantiate(projectilePrefab, spawnPosition, Quaternion.LookRotation(shootDirection));
         Rigidbody rb = projectile.GetComponent<Rigidbody>();
         if (rb == null)
         {
@@ -166,8 +146,16 @@ public class PlayerController : MonoBehaviour
 
         rb.isKinematic = false;
         rb.useGravity = false;
-        rb.velocity = direction * projectileSpeed;
+        rb.velocity = shootDirection * projectileSpeed;
         rb.angularVelocity = Vector3.zero;
+
+        ProjectileDamage projectileDamageComponent = projectile.GetComponent<ProjectileDamage>();
+        if (projectileDamageComponent == null)
+        {
+            projectileDamageComponent = projectile.AddComponent<ProjectileDamage>();
+        }
+
+        projectileDamageComponent.damage = projectileDamage;
 
         nextFireTime = Time.time + fireRate;
         Debug.Log("Shot fired", this);
@@ -194,15 +182,13 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        Vector3 screenCenter = new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f);
-        Ray ray = aimCamera.ScreenPointToRay(screenCenter);
-
+        Ray ray = new Ray(aimCamera.transform.position, aimCamera.transform.forward);
         if (Physics.Raycast(ray, out RaycastHit hit, meleeRange))
         {
             EnemySkeleton enemy = hit.collider.GetComponentInParent<EnemySkeleton>();
             if (enemy != null)
             {
-                enemy.TakeDamage(meleeDamage);
+                enemy.TakeDamage((int)meleeDamage);
                 Debug.Log("Melee hit");
                 return;
             }
@@ -219,6 +205,8 @@ public class PlayerController : MonoBehaviour
         }
 
         currentHealth -= damageAmount;
+        Debug.Log($"PlayerController: Took {damageAmount} damage. Current health: {currentHealth}", this);
+
         if (currentHealth <= 0f)
         {
             currentHealth = 0f;

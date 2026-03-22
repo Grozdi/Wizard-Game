@@ -3,13 +3,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
-/*
-    EnemySkeleton.cs
-
-    Basic NavMesh enemy that chases the player, damages on contact,
-    takes projectile/melee damage, flashes on hit, and drops loot on death.
-*/
-
 [RequireComponent(typeof(NavMeshAgent))]
 public class EnemySkeleton : MonoBehaviour
 {
@@ -17,13 +10,13 @@ public class EnemySkeleton : MonoBehaviour
     public float moveSpeed = 3.5f;
 
     [Header("Combat")]
-    public float damage = 10f;
-    public float damageCooldown = 0.75f;
-    public float projectileDamage = 25f;
+    public int damage = 10;
+    public float attackRange = 2f;
+    public float attackCooldown = 1f;
 
     [Header("Health")]
-    public float maxHealth = 50f;
-    public float currentHealth = 50f;
+    public int maxHealth = 100;
+    [SerializeField] private int currentHealth;
 
     [Header("Loot")]
     public GameObject lootPrefab;
@@ -37,7 +30,7 @@ public class EnemySkeleton : MonoBehaviour
 
     private NavMeshAgent agent;
     private Transform playerTransform;
-    private float nextDamageTime;
+    private float nextAttackTime;
     private bool isDead;
     private bool hasLoggedMissingPlayer;
     private Vector3 originalScale;
@@ -48,13 +41,13 @@ public class EnemySkeleton : MonoBehaviour
     private void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
-        currentHealth = maxHealth;
         originalScale = transform.localScale;
         CacheRenderMaterials();
     }
 
     private void Start()
     {
+        currentHealth = maxHealth;
         TryFindPlayer();
     }
 
@@ -74,41 +67,13 @@ public class EnemySkeleton : MonoBehaviour
         Vector3 lookTarget = new Vector3(playerTransform.position.x, transform.position.y, playerTransform.position.z);
         transform.LookAt(lookTarget);
 
-        if (!agent.isOnNavMesh)
+        if (agent.isOnNavMesh)
         {
-            return;
+            agent.speed = moveSpeed;
+            agent.SetDestination(playerTransform.position);
         }
 
-        agent.speed = moveSpeed;
-        agent.SetDestination(playerTransform.position);
-    }
-
-    private void OnCollisionStay(Collision collision)
-    {
-        TryDamagePlayer(collision.gameObject);
-    }
-
-    private void OnTriggerStay(Collider other)
-    {
-        TryDamagePlayer(other.gameObject);
-    }
-
-    private void OnCollisionEnter(Collision collision)
-    {
-        if (collision.gameObject.CompareTag("Projectile"))
-        {
-            TakeDamage(projectileDamage);
-            Destroy(collision.gameObject);
-        }
-    }
-
-    private void OnTriggerEnter(Collider other)
-    {
-        if (other.CompareTag("Projectile"))
-        {
-            TakeDamage(projectileDamage);
-            Destroy(other.gameObject);
-        }
+        TryAttackPlayer();
     }
 
     private void TryFindPlayer()
@@ -118,7 +83,6 @@ public class EnemySkeleton : MonoBehaviour
         {
             playerTransform = playerObj.transform;
             hasLoggedMissingPlayer = false;
-            Debug.Log("Player is found", this);
             return;
         }
 
@@ -129,49 +93,60 @@ public class EnemySkeleton : MonoBehaviour
         }
     }
 
-    private void TryDamagePlayer(GameObject other)
+    private void TryAttackPlayer()
     {
-        if (isDead || !other.CompareTag("Player"))
+        if (playerTransform == null || Time.time < nextAttackTime)
         {
             return;
         }
 
-        if (Time.time < nextDamageTime)
+        float distanceToPlayer = Vector3.Distance(transform.position, playerTransform.position);
+        if (distanceToPlayer > attackRange)
         {
             return;
         }
 
-        PlayerController player = other.GetComponent<PlayerController>();
-        if (player != null)
+        PlayerHealth playerHealth = playerTransform.GetComponent<PlayerHealth>();
+        if (playerHealth != null)
         {
-            player.TakeDamage(damage);
-            nextDamageTime = Time.time + damageCooldown;
+            playerHealth.TakeDamage(damage);
         }
+        else
+        {
+            PlayerController playerController = playerTransform.GetComponent<PlayerController>();
+            if (playerController != null)
+            {
+                playerController.TakeDamage(damage);
+            }
+        }
+
+        nextAttackTime = Time.time + attackCooldown;
     }
 
-    public void TakeDamage(float amount)
+    public void TakeDamage(int amount)
     {
         ApplyDamage(amount, false);
     }
 
-    public void TakeCriticalDamage(float amount)
+    public void TakeCriticalDamage(int amount)
     {
         ApplyDamage(amount, true);
     }
 
-    private void ApplyDamage(float amount, bool isCriticalHit)
+    private void ApplyDamage(int amount, bool isCriticalHit)
     {
-        if (amount <= 0f || isDead)
+        if (amount <= 0 || isDead)
         {
             return;
         }
 
         currentHealth -= amount;
+        Debug.Log($"Enemy hit for {amount} damage. Current health: {currentHealth}", this);
         PlayHitFeedback(isCriticalHit);
 
-        if (currentHealth <= 0f)
+        if (currentHealth <= 0)
         {
-            currentHealth = 0f;
+            currentHealth = 0;
             Die();
         }
     }
@@ -193,9 +168,7 @@ public class EnemySkeleton : MonoBehaviour
     {
         SetMaterialColors(flashColor);
         transform.localScale = originalScale * scaleMultiplier;
-
         yield return new WaitForSeconds(hitFeedbackDuration);
-
         RestoreOriginalVisuals();
         hitFeedbackRoutine = null;
     }
@@ -234,7 +207,6 @@ public class EnemySkeleton : MonoBehaviour
     private void RestoreOriginalVisuals()
     {
         transform.localScale = originalScale;
-
         for (int i = 0; i < cachedMaterials.Count; i++)
         {
             if (cachedMaterials[i] != null)
@@ -252,7 +224,7 @@ public class EnemySkeleton : MonoBehaviour
         }
 
         Debug.Log("Dropping loot", this);
-        Instantiate(lootPrefab, transform.position + Vector3.up * 1f, Quaternion.identity);
+        Instantiate(lootPrefab, transform.position + Vector3.up, Quaternion.identity);
     }
 
     private void Die()
@@ -271,7 +243,7 @@ public class EnemySkeleton : MonoBehaviour
             hitFeedbackRoutine = null;
         }
 
-        Debug.Log("Enemy died", this);
+        Debug.Log("Enemy death", this);
         DropLoot();
         Destroy(gameObject);
     }

@@ -82,9 +82,12 @@ public class PlayerController : MonoBehaviour
         float mouseY = Input.GetAxis("Mouse Y") * lookSensitivity;
 
         transform.Rotate(Vector3.up * mouseX);
-        pitch -= mouseY;
-        pitch = Mathf.Clamp(pitch, minPitch, maxPitch);
-        playerCamera.localRotation = Quaternion.Euler(pitch, 0f, 0f);
+        if (playerCamera.GetComponent<CameraFollow>() == null)
+        {
+            pitch -= mouseY;
+            pitch = Mathf.Clamp(pitch, minPitch, maxPitch);
+            playerCamera.localRotation = Quaternion.Euler(pitch, 0f, 0f);
+        }
     }
 
     private void HandleCombat()

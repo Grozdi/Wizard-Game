@@ -161,6 +161,10 @@ public class PlayerController : MonoBehaviour
 =======
         rb.useGravity = false;
         rb.linearVelocity = direction * projectileSpeed;
+<<<<<<< Updated upstream
+=======
+        rb.angularVelocity = Vector3.zero;
+>>>>>>> Stashed changes
 
         Debug.Log("Projectile fired");
 >>>>>>> Stashed changes

@@ -32,6 +32,7 @@ public class PlayerController : MonoBehaviour
     public Transform projectileSpawnPoint;
     public float projectileSpeed = 25f;
     public float projectileLifetime = 5f;
+    public float fireRate = 0.15f;
     public float meleeDamage = 25f;
     public float meleeRange = 3f;
 
@@ -42,6 +43,7 @@ public class PlayerController : MonoBehaviour
     private CharacterController characterController;
     private float verticalVelocity;
     private float pitch;
+    private float nextFireTime;
 
     private void Awake()
     {
@@ -104,6 +106,11 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
+        if (Time.time < nextFireTime)
+        {
+            return;
+        }
+
         if (projectilePrefab == null)
         {
             Debug.LogError("PlayerController: projectilePrefab is not assigned.", this);
@@ -162,7 +169,8 @@ public class PlayerController : MonoBehaviour
         rb.velocity = direction * projectileSpeed;
         rb.angularVelocity = Vector3.zero;
 
-        Debug.Log("Projectile fired", this);
+        nextFireTime = Time.time + fireRate;
+        Debug.Log("Shot fired", this);
         Destroy(projectile, projectileLifetime);
     }
 

@@ -162,7 +162,10 @@ public class PlayerController : MonoBehaviour
         rb.useGravity = false;
         rb.linearVelocity = direction * projectileSpeed;
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+=======
+>>>>>>> Stashed changes
         rb.angularVelocity = Vector3.zero;
 >>>>>>> Stashed changes
 
